@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Chai Code Backend Project",
   "main": "server.js",
+  "type": "module",
   "scripts": {
+    "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -18,8 +20,11 @@
   "author": "Muhammad Qasim Nauman",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "mongoose": "^8.9.3",
+    "mongoose": "^8.9.3"
+  },
+  "devDependencies": {
     "nodemon": "^3.1.9"
   }
 }
