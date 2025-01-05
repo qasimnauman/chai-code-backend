@@ -1,0 +1,25 @@
+{
+  "name": "chai-code-backend",
+  "version": "1.0.0",
+  "description": "Chai Code Backend Project",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "js",
+    "chai",
+    "code",
+    "backend",
+    "express",
+    "node"
+  ],
+  "author": "Muhammad Qasim Nauman",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongoose": "^8.9.3",
+    "nodemon": "^3.1.9"
+  }
+}
