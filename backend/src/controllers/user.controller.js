@@ -1,10 +1,8 @@
-import { response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { Apierror as ApiError } from "../utils/ApiError.js";
 import { User } from "../models/users.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { Apiresponse } from "../utils/Apiresponse.js"
-import { genSalt } from "bcrypt";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshToken = async (userId) => {
