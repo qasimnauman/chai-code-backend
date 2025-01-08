@@ -172,7 +172,8 @@ const loginUser = asyncHandler(
                     "User logged in successfully"
                 )
             )
-    });
+    }
+);
 
 const logoutUser = asyncHandler(
     async (req, res) => {
@@ -210,7 +211,8 @@ const logoutUser = asyncHandler(
                     200, {}, "User Logged Out"
                 )
             )
-    });
+    }
+);
 
 const refreshAccessToken = asyncHandler(
     async (req, res) => {
@@ -222,34 +224,34 @@ const refreshAccessToken = asyncHandler(
 
         try {
             const decodedtoken = jwt.verify(incomingrefreshToken, process.env.REFRESH_TOKEN_SECRET)
-    
+
             const user = await User.findById(decodedtoken?._id);
-    
+
             if (!user) {
                 throw new ApiError(400, "User Not Found")
             }
-    
+
             if (incomingrefreshToken !== user?.refreshToken) {
                 throw new ApiError(401, "Refresh token expired or used")
             }
-    
+
             const { accessToken, newRefreshToken } = await generateAccessAndRefreshToken(user._id);
-    
+
             const options = {
                 httpOnly: true,
                 // maxAge: 24 * 60 * 60 * 1000,
                 secure: true,
             }
-    
+
             return res.status(200)
                 .cookie("accessToken", accessToken, Options)
                 .cookie("refreshToken", newRefreshToken, Options)
                 .json(
                     new Apiresponse(
                         200, {
-                            accessToken,
-                            refreshToken: newRefreshToken,
-                        },
+                        accessToken,
+                        refreshToken: newRefreshToken,
+                    },
                         "Access Token Refreshed"
                     )
                 )
@@ -257,11 +259,170 @@ const refreshAccessToken = asyncHandler(
             throw new ApiError(401, error?.message || "Invalid Refresh Token")
         }
     }
-)
+);
 
-export { 
+const changeUserCurrentPassword = asyncHandler(
+    async (req, res) => {
+        const { oldpassword, newpassword } = req.body;
+
+        // if (!(oldpassword === confirmpassword)) {
+        //     throw new ApiError(401, "Passwords are not correct")
+        // }
+
+        const user = await User.findById(req.user?._id)
+        const isPasswordCorrect = await user.isPasswordCorrect(oldpassword);
+
+        if (!isPasswordCorrect) {
+            throw new ApiError(400, "Invalid Passowrd")
+        }
+
+        user.password = newpassword;
+
+        await user.save({
+            validateBeforeSave: false
+        })
+
+        return req.status(200)
+            .json(
+                new Apiresponse(
+                    200,
+                    {},
+                    "Password Changed Successfully"
+                )
+            )
+    }
+);
+
+const getCurrectUser = asyncHandler(
+    async (req, res) => {
+        return res.status(200)
+            .json(
+                new Apiresponse(
+                    200,
+                    req.user,
+                    "Current User Fetched Successfully"
+                )
+            )
+    }
+);
+
+const upadateUserAccountDetails = asyncHandler(
+    async (req, res) => {
+        const {
+            fullName,
+            email
+        } = req.body
+
+        if ([fullName, email].some((feild) => feild?.trim() === "")) {
+            throw new ApiError(400, "All feilds are required")
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $set: {
+                    fullName,
+                    email: email
+                }
+            },
+            {
+                new: true
+            }
+        ).select("-password")
+
+        return res.status(200)
+            .json(
+                new Apiresponse(
+                    200,
+                    user,
+                    "Account Details Updated Successfully"
+                )
+            )
+    }
+);
+
+const updateAvatar = asyncHandler(
+    async (req, res) => {
+        const avatarLocalPath = req.file?.path;
+        console.log("\n", avatarLocalPath)
+
+        if (!avatarLocalPath) {
+            throw new ApiError(400, "Avatar file is Missing")
+        }
+
+        const avatar = await uploadOnCloudinary(avatarLocalPath);
+        console.log("\n", avatar)
+
+        if (!avatar) {
+            throw new ApiError(400, "Error Uploading Avatar")
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user?._id,
+            {
+                $set: {
+                    avatar: avatar.url
+                }
+            },
+            { new: true }
+        ).select("-password")
+
+        return res.status(200)
+        .json(
+            new Apiresponse(
+                200,
+                user,
+                "Successfully Updated Avatar"
+            )
+        )
+    }
+);
+
+const updateCoverImage = asyncHandler(
+    async (req, res) => {
+        const coverImageLocalPath = req.file?.path;
+        console.log("\n", coverImageLocalPath)
+
+        if (!coverImageLocalPath) {
+            throw new ApiError(400, "Cover Image file is Missing")
+        }
+
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        console.log("\n", coverImage)
+
+        if (!coverImage) {
+            throw new ApiError(400, "Error Uploading Cover Image")
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user?._id,
+            {
+                $set: {
+                    coverImage: coverImage.url
+                }
+            },
+            { new: true }
+        ).select("-password")
+
+        return res.status(200)
+        .json(
+            new Apiresponse(
+                200,
+                user,
+                "Cover Image Updated Successfully"
+            )
+        )
+    }
+);
+
+export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeUserCurrentPassword,
+    getCurrectUser,
+    upadateUserAccountDetails,
+    updateAvatar,
+    updateCoverImage
 }
