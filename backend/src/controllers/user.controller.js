@@ -9,8 +9,14 @@ import { genSalt } from "bcrypt";
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId)
+
+        if (!user) {
+            throw new ApiError(404, "User not found");
+        }
         const generatedAccessToken = user.generateAccessToken()
         const generatedRefreshToken = user.generateRefreshToken()
+
+        // console.log("Access", generatedAccessToken, "\nRefresh", generatedRefreshToken);
 
         user.refreshToken = generatedRefreshToken
         await user.save({
@@ -19,6 +25,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
         return { generatedAccessToken, generatedRefreshToken }
     } catch (error) {
+        console.error("Token Generation Error:", error.message);
         throw new ApiError(500, "Something went wrong while generating refresh and access token")
     }
 }
@@ -118,15 +125,16 @@ const loginUser = asyncHandler(
         // If Found then set the access the token and refresh token
         // Return the User with the access token and refresh token in the form of secure cookies
 
-        const { username, email, password } = req.body
+        const { username, password, email } = req.body
 
-        if ([username, email].some((field) => field?.trim() === "")) {
+        if ([username, password, email].some((field) => field?.trim() === "")) {
             throw new ApiError(400, "Username/Email and Password are required")
         }
 
         const user = await User.findOne({
             $or: [{ username }, { email }]
         })
+        // console.log("User Check ", user);
 
         if (!user) {
             throw new ApiError(404, "User is not registered")
@@ -139,6 +147,8 @@ const loginUser = asyncHandler(
         }
 
         const { generatedAccessToken, generatedRefreshToken } = await generateAccessAndRefreshToken(user._id);
+
+        // console.log("Access", generatedAccessToken, "Refresh", generatedRefreshToken);
 
         const loggedInUser = await User.findById(user._id).select(
             "-password -refreshToken"
@@ -167,12 +177,20 @@ const loginUser = asyncHandler(
 
 const logoutUser = asyncHandler(
     async (req, res) => {
+        // console.log("\n\n Logout User \n\n");
         // Clear Refresh Token
         // Clear Cookies
+
+        if (!req.user) {
+            return res.status(400).json(new Apiresponse(400, {}, "No user is logged in"));
+        }
+
         await User.findByIdAndUpdate(
             req.user._id,
             {
-                $set: { refreshToken: undefined },
+                $unset: {
+                    refreshToken: 1 // this removes the field from document
+                }
             },
             {
                 new: true
@@ -181,12 +199,13 @@ const logoutUser = asyncHandler(
 
         const Options = {
             httpOnly: true,
-            secure: true
+            secure: true,
+            maxAge: 0
         }
 
         return res.status(200)
-            .cookie("accessToken", options)
-            .cookie("refreshToken", options)
+            .cookie("accessToken", "", Options)
+            .cookie("refreshToken", "", Options)
             .json(
                 new Apiresponse(
                     200, {}, "User Logged Out"

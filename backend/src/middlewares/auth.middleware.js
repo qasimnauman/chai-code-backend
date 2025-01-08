@@ -1,30 +1,31 @@
 // Verifies if the user is logged in or not
 
-import { JWT } from "jsonwebtoken";
-import { Apierror } from "../utils/ApiError.js";
+import jwt from "jsonwebtoken";
+import { Apierror as ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/users.model.js";
 
-export const verifyJWT = asyncHandler(async (req, _, next) => {
+export const verifyJWT = asyncHandler(async(req, _, next) => {
     try {
-        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
-        if (!token) {
-            throw new Apierror(404, "Unauthorized Request");
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+        
+        console.log(token);
+        if (!token || typeof token !== "string") {
+            throw new ApiError(401, "Unauthorized: Token is missing or invalid");
         }
-
-        const decoded = JWT.verify(token, process.env.SECRET_KEY);
-
-        const user = await User.findById(decoded._id).select(
-            "-password -refreshToken"
-        )
-
+    
+        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+    
+        const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
+    
         if (!user) {
-            throw new Apierror(401, "Invalid Access Token")
+            throw new ApiError(401, "Invalid Access Token")
         }
-
+    
         req.user = user;
         next()
     } catch (error) {
-        throw new Apierror(401, error?.message || "Invalid Access Token")
+        throw new ApiError(401, error?.message || "Invalid access token")
     }
-});
+    
+})
