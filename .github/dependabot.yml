@@ -1,0 +1,6 @@
+version: 2
+updates:
+  - package-ecosystem: "npm" # Use npm for Express applications
+    directory: "/backend" # Location of package.json for your backend
+    schedule:
+      interval: "weekly" # Dependabot checks for updates weekly
