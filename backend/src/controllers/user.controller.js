@@ -368,13 +368,13 @@ const updateAvatar = asyncHandler(
         ).select("-password")
 
         return res.status(200)
-        .json(
-            new Apiresponse(
-                200,
-                user,
-                "Successfully Updated Avatar"
+            .json(
+                new Apiresponse(
+                    200,
+                    user,
+                    "Successfully Updated Avatar"
+                )
             )
-        )
     }
 );
 
@@ -405,15 +405,100 @@ const updateCoverImage = asyncHandler(
         ).select("-password")
 
         return res.status(200)
+            .json(
+                new Apiresponse(
+                    200,
+                    user,
+                    "Cover Image Updated Successfully"
+                )
+            )
+    }
+);
+
+const getUserChannelProfile = asyncHandler(
+    async (req, res) => {
+        const { username } = req.params;
+
+        // Check if username is valid
+        if (!username || !username.trim()) {
+            throw new ApiError(400, "User not found");
+        }
+
+        const channel = await User.aggregate([
+            {
+                $match: {
+                    username: username.toLowerCase()
+                }
+            },
+            {
+                $lookup: {
+                    from: "Subscription", // Ensure the collection name is correct
+                    localField: "_id",
+                    foreignField: "channel",
+                    as: "subscribers"
+                }
+            },
+            {
+                $lookup: {
+                    from: "Subscription", // Ensure the collection name is correct
+                    localField: "_id",
+                    foreignField: "subscriber", // Fixed field reference
+                    as: "subscribedTo"
+                }
+            },
+            {
+                $addFields: {
+                    subscribersCount: {
+                        $size: "$subscribers"
+                    },
+                    channelSubscribedTo: {
+                        $size: "$subscribedTo"
+                    },
+                    isSubscribed: {
+                        $cond: {
+                            if: {
+                                $in: [
+                                    req.user?._id,
+                                    { $map: { input: "$subscribers", as: "sub", in: "$$sub.subscriber" } }
+                                ]
+                            },
+                            then: true,
+                            else: false
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    fullName: 1,
+                    username: 1,
+                    subscribersCount: 1,
+                    channelSubscribedTo: 1,
+                    isSubscribed: 1,
+                    coverImage: 1,
+                    avatar: 1,
+                    email: 1
+                }
+            }
+        ]);
+
+        console.log(channel);
+
+        if(!channel?.length){
+            throw new ApiError(404, "Channel does not exist");
+        }
+
+        return res.status(200)
         .json(
             new Apiresponse(
                 200,
-                user,
-                "Cover Image Updated Successfully"
+                channel[0],
+                "User Channel Fetched Successfully"
             )
         )
     }
 );
+
 
 export {
     registerUser,
@@ -424,5 +509,6 @@ export {
     getCurrectUser,
     upadateUserAccountDetails,
     updateAvatar,
-    updateCoverImage
+    updateCoverImage,
+    getUserChannelProfile
 }
