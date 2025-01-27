@@ -5,13 +5,13 @@
     "description": "Description",
     "version": "1.0.0"
   },
-  "host": "localhost:8000",
+  "host": "localhost:8000/api/v1",
   "basePath": "/",
   "schemes": [
     "http"
   ],
   "paths": {
-    "/c/{channelId}": {
+    "/c/{channelId}/subscribe": {
       "post": {
         "description": "",
         "parameters": [
@@ -25,6 +25,24 @@
         "responses": {
           "201": {
             "description": "Created"
+          }
+        }
+      }
+    },
+    "/c/{channelId}/subscribers": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -150,8 +168,8 @@
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "OK"
           }
         }
       }
