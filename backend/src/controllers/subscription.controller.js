@@ -48,10 +48,10 @@ const addNewSubscription = asyncHandler(
         console.log("Subscription Created:", newSubscription);
 
         return res
-        .status(201)
-        .json(
-            new ApiResponse(201, newSubscription, "Subscription added successfully")
-        );
+            .status(201)
+            .json(
+                new ApiResponse(201, newSubscription, "Subscription added successfully")
+            );
     }
 );
 
@@ -96,18 +96,25 @@ const getUserChannelSubscribers = asyncHandler(
         }
 
         return res
-        .status(200)
-        .json(
-            new ApiResponse(
-                200,
-                subscriberList,
-                "Subscriber List Fetched Successfully"
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    subscriberList,
+                    "Subscriber List Fetched Successfully"
+                )
             )
-        )
+    }
+);
+
+const getSubscribedChannels = asyncHandler(
+    async (req, res) => {
+
     }
 );
 
 export {
     addNewSubscription,
-    getUserChannelSubscribers
+    getUserChannelSubscribers,
+    getSubscribedChannels
 };
