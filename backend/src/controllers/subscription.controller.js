@@ -72,7 +72,7 @@ const getUserChannelSubscribers = asyncHandler(
             },
             {
                 $lookup: {
-                    from: "User",
+                    from: "users",
                     localField: "channel",
                     foreignField: "_id",
                     as: "subscriber",

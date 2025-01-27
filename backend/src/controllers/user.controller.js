@@ -433,7 +433,7 @@ const getUserChannelProfile = asyncHandler(
             },
             {
                 $lookup: {
-                    from: "Subscription", // Ensure the collection name is correct
+                    from: "subscriptions", // Ensure the collection name is correct
                     localField: "_id",
                     foreignField: "channel",
                     as: "subscribers"
@@ -441,7 +441,7 @@ const getUserChannelProfile = asyncHandler(
             },
             {
                 $lookup: {
-                    from: "Subscription", // Ensure the collection name is correct
+                    from: "subscriptions", // Ensure the collection name is correct
                     localField: "_id",
                     foreignField: "subscriber", // Fixed field reference
                     as: "subscribedTo"
