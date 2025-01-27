@@ -41,6 +41,6 @@ app.use(cookieParser());
 
 // Routes Declaration
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/subscription", subscriptionRouter);
+app.use("/api/v1/subscriptions", subscriptionRouter);
 
 export { app };

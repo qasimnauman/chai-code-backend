@@ -266,9 +266,9 @@ const changeUserCurrentPassword = asyncHandler(
     async (req, res) => {
         const { oldpassword, newpassword } = req.body;
 
-        // if (!(oldpassword === confirmpassword)) {
-        //     throw new Apierror(401, "Passwords are not correct")
-        // }
+        if (oldpassword === newpassword) {
+            throw new Apierror(401, "Old and New Passwords Cannot be the same")
+        }
 
         const user = await User.findById(req.user?._id)
         const isPasswordCorrect = await user.isPasswordCorrect(oldpassword);
@@ -283,7 +283,8 @@ const changeUserCurrentPassword = asyncHandler(
             validateBeforeSave: false
         })
 
-        return req.status(200)
+        return res
+            .status(200)
             .json(
                 new Apiresponse(
                     200,
