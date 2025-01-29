@@ -113,9 +113,9 @@ const getUserChannelSubscribers = asyncHandler(
                 }
             }
         ])
-        
+
         // console.log("list", subscriberList);
-        
+
         if (!subscriberList) {
             throw new ApiError(
                 404,
@@ -146,34 +146,70 @@ const getSubscribedChannels = asyncHandler(
             )
         }
 
-        const channelSubscriptionList = await Subscription.aggregate([
-            // Step 1: Find subscriptions for the target user
+        // const channel = await Subscription.find({
+        //     subscriber: subscriberId
+        // }).select("_id");
+
+        // console.log(channel);
+
+        const channelListSubscriber = await User.aggregate([
             {
                 $match: {
                     username: subscriberId.toLowerCase()
                 }
             },
-            // Step 2: Join with `users` to get channel details
             {
                 $lookup: {
-                    from: "users",           // Join with users/channels collection
-                    localField: "channelId", // Field in Subscription pointing to the channel
-                    foreignField: "_id",     // Field in User collection (channel's ID)
-                    as: "channelDetails",
+                    from: "subscriptions",
+                    localField: "_id",
+                    foreignField: "subscriber",
+                    as: "subscribedchannels",
                     pipeline: [
-                        // Keep only necessary fields
-                        { $project: { avatar: 1, username: 1 } }
+                        {
+                            $project: {
+                                _id: 0,
+                                subscriber: 1
+                            }
+                        }
                     ]
                 }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "subscribedchannels.subscriber",
+                    foreignField: "_id",
+                    as: "subscriberdetails",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 0,
+                                username: 1,
+                                avatar:1,
+                                fullName:1,
+                                createdAt: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    username: "$subscriberdetails.username",
+                    avatar: "$subscriberdetails.avatar",
+                    fullName: "$subscriberdetails.fullName",
+                    createdAt: "$subscriberdetails.createdAt"
+                }
             }
-        ]);
+        ])
 
-        console.log(channelSubscriptionList);
+        // console.log("channel", channelListSubscriber)
 
-        if (!channelSubscriptionList) {
+        if (!channelListSubscriber) {
             throw new ApiError(
                 404,
-                "No Subscriber Found"
+                "No Channels Subscribed"
             )
         }
 
@@ -182,7 +218,7 @@ const getSubscribedChannels = asyncHandler(
             .json(
                 new ApiResponse(
                     200,
-                    channelSubscriptionList,
+                    channelListSubscriber,
                     "Subscribed Channel List Fetched Successfully"
                 )
             )
