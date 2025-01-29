@@ -3,6 +3,7 @@ import { Apierror as ApiError } from "../utils/ApiError.js";
 import { User } from "../models/users.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import { Apiresponse as ApiResponse } from "../utils/Apiresponse.js";
+import mongoose from "mongoose"
 
 const addNewSubscription = asyncHandler(
     async (req, res) => {
@@ -64,30 +65,57 @@ const getUserChannelSubscribers = asyncHandler(
             throw new ApiError(400, "Channel ID is required")
         }
 
+        const channel = await User.findOne({
+            username: channelId
+        }).select("_id");
+
+        // console.log(
+        //     "channel: ", channel._id
+        // )
+
+        // const subss = await Subscription.find({
+        //     channel: channel._id
+        // })
+
+        // console.log(subss);
+
         const subscriberList = await Subscription.aggregate([
             {
                 $match: {
-                    channel: channelId.toLowerCase()
+                    channel: channel._id
                 }
             },
             {
                 $lookup: {
                     from: "users",
-                    localField: "channel",
+                    localField: "subscriber",
                     foreignField: "_id",
                     as: "subscriber",
+                    pipeline: [
+                        {
+                            $project: {
+                                username: 1,
+                                avatar: 1,
+                                fullName: 1,
+                                createdAt: 1,
+                            }
+                        },
+                    ]
                 }
             },
             {
                 $project: {
-                    username: 1,
-                    email: 1,
-                    createdAt: 1,
-                    avatar: 1
+                    _id: 0,
+                    username: "$subscriber.username",
+                    avatar: "$subscriber.avatar",
+                    fullName: "$subscriber.fullName",
+                    createdAt: "$subscriber.createdAt",
                 }
             }
         ])
-
+        
+        // console.log("list", subscriberList);
+        
         if (!subscriberList) {
             throw new ApiError(
                 404,
@@ -109,7 +137,55 @@ const getUserChannelSubscribers = asyncHandler(
 
 const getSubscribedChannels = asyncHandler(
     async (req, res) => {
+        const { subscriberId } = req.params;
 
+        if (!subscriberId?.trim()) {
+            throw new ApiError(
+                401,
+                "Subscriber ID Required"
+            )
+        }
+
+        const channelSubscriptionList = await Subscription.aggregate([
+            // Step 1: Find subscriptions for the target user
+            {
+                $match: {
+                    username: subscriberId.toLowerCase()
+                }
+            },
+            // Step 2: Join with `users` to get channel details
+            {
+                $lookup: {
+                    from: "users",           // Join with users/channels collection
+                    localField: "channelId", // Field in Subscription pointing to the channel
+                    foreignField: "_id",     // Field in User collection (channel's ID)
+                    as: "channelDetails",
+                    pipeline: [
+                        // Keep only necessary fields
+                        { $project: { avatar: 1, username: 1 } }
+                    ]
+                }
+            }
+        ]);
+
+        console.log(channelSubscriptionList);
+
+        if (!channelSubscriptionList) {
+            throw new ApiError(
+                404,
+                "No Subscriber Found"
+            )
+        }
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    channelSubscriptionList,
+                    "Subscribed Channel List Fetched Successfully"
+                )
+            )
     }
 );
 
