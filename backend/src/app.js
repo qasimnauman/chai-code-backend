@@ -7,6 +7,7 @@ import swaggerDocument from "./swagger-output.json" assert { type: 'json' };
 // Routes Imports
 import userRouter from "./routes/user.routes.js";
 import subscriptionRouter from "./routes/subscription.routes.js";
+import videoRouter from "./routes/videos.routes.js"
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use(cookieParser());
 
 // Routes Declaration
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/subscription", subscriptionRouter);
+app.use("/api/v1/subscriptions", subscriptionRouter);
+app.use("/api/v1/videos", videoRouter);
 
 export { app };

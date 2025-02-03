@@ -1,6 +1,5 @@
-import mongoose, { Schema } from "mongoose"
+import { mongoose, Schema } from "mongoose"
 import mongooseAgregateSchema from "mongoose-aggregate-paginate-v2"
-
 
 const videoSchema = new Schema({
     owner: {
@@ -31,7 +30,7 @@ const videoSchema = new Schema({
         }
     ],
     duration: {
-        type: Number, //Cloudinary URL
+        type: Number,
         required: true
     },
     isPublished: {

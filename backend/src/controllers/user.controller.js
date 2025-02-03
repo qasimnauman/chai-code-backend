@@ -25,7 +25,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
         return { generatedAccessToken, generatedRefreshToken }
     } catch (error) {
-        console.error("Token Generation Error:", error.message);
+        // console.error("Token Generation Error:", error.message);
         throw new Apierror(500, "Something went wrong while generating refresh and access token")
     }
 }
@@ -75,15 +75,16 @@ const registerUser = asyncHandler(
         const avatarLocalPath = req.files?.avatar[0]?.path;
 
         let coverImageLocalPath;
-        if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.lenght > 0) {
-            const coverImageLocalPath = req.files.coverImage[0].path;
+        if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+            coverImageLocalPath = req.files.coverImage[0].path;
         }
 
         if (!avatarLocalPath) {
             throw new Apierror(400, "Avatar file is required")
         }
-        const avataruploadResponse = await uploadOnCloudinary(avatarLocalPath)
-        const coveruploadResponse = await uploadOnCloudinary(coverImageLocalPath)
+
+        const avataruploadResponse = await uploadOnCloudinary(avatarLocalPath, username, "avatar")
+        const coveruploadResponse = await uploadOnCloudinary(coverImageLocalPath, username, "coverImage")
         console.log(avataruploadResponse);
         console.log(coveruploadResponse);
 
@@ -266,9 +267,9 @@ const changeUserCurrentPassword = asyncHandler(
     async (req, res) => {
         const { oldpassword, newpassword } = req.body;
 
-        // if (!(oldpassword === confirmpassword)) {
-        //     throw new Apierror(401, "Passwords are not correct")
-        // }
+        if (oldpassword === newpassword) {
+            throw new Apierror(401, "Old and New Passwords Cannot be the same")
+        }
 
         const user = await User.findById(req.user?._id)
         const isPasswordCorrect = await user.isPasswordCorrect(oldpassword);
@@ -283,7 +284,8 @@ const changeUserCurrentPassword = asyncHandler(
             validateBeforeSave: false
         })
 
-        return req.status(200)
+        return res
+            .status(200)
             .json(
                 new Apiresponse(
                     200,
@@ -351,7 +353,7 @@ const updateAvatar = asyncHandler(
             throw new Apierror(400, "Avatar file is Missing")
         }
 
-        const avatar = await uploadOnCloudinary(avatarLocalPath);
+        const avatar = await uploadOnCloudinary(avatarLocalPath, req.user?.username, "avatar");
         console.log("\n", avatar)
 
         if (!avatar) {
@@ -388,7 +390,7 @@ const updateCoverImage = asyncHandler(
             throw new Apierror(400, "Cover Image file is Missing")
         }
 
-        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath, req.user?.username, "coverImage");
         console.log("\n", coverImage)
 
         if (!coverImage) {
@@ -433,7 +435,7 @@ const getUserChannelProfile = asyncHandler(
             },
             {
                 $lookup: {
-                    from: "Subscription", // Ensure the collection name is correct
+                    from: "subscriptions", // Ensure the collection name is correct
                     localField: "_id",
                     foreignField: "channel",
                     as: "subscribers"
@@ -441,7 +443,7 @@ const getUserChannelProfile = asyncHandler(
             },
             {
                 $lookup: {
-                    from: "Subscription", // Ensure the collection name is correct
+                    from: "subscriptions", // Ensure the collection name is correct
                     localField: "_id",
                     foreignField: "subscriber", // Fixed field reference
                     as: "subscribedTo"

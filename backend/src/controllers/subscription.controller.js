@@ -3,6 +3,7 @@ import { Apierror as ApiError } from "../utils/ApiError.js";
 import { User } from "../models/users.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import { Apiresponse as ApiResponse } from "../utils/Apiresponse.js";
+import mongoose from "mongoose"
 
 const addNewSubscription = asyncHandler(
     async (req, res) => {
@@ -48,10 +49,10 @@ const addNewSubscription = asyncHandler(
         console.log("Subscription Created:", newSubscription);
 
         return res
-        .status(201)
-        .json(
-            new ApiResponse(201, newSubscription, "Subscription added successfully")
-        );
+            .status(201)
+            .json(
+                new ApiResponse(201, newSubscription, "Subscription added successfully")
+            );
     }
 );
 
@@ -64,29 +65,56 @@ const getUserChannelSubscribers = asyncHandler(
             throw new ApiError(400, "Channel ID is required")
         }
 
+        const channel = await User.findOne({
+            username: channelId
+        }).select("_id");
+
+        // console.log(
+        //     "channel: ", channel._id
+        // )
+
+        // const subss = await Subscription.find({
+        //     channel: channel._id
+        // })
+
+        // console.log(subss);
+
         const subscriberList = await Subscription.aggregate([
             {
                 $match: {
-                    channel: channelId.toLowerCase()
+                    channel: channel._id
                 }
             },
             {
                 $lookup: {
-                    from: "User",
-                    localField: "channel",
+                    from: "users",
+                    localField: "subscriber",
                     foreignField: "_id",
                     as: "subscriber",
+                    pipeline: [
+                        {
+                            $project: {
+                                username: 1,
+                                avatar: 1,
+                                fullName: 1,
+                                createdAt: 1,
+                            }
+                        },
+                    ]
                 }
             },
             {
                 $project: {
-                    username: 1,
-                    email: 1,
-                    createdAt: 1,
-                    avatar: 1
+                    _id: 0,
+                    username: "$subscriber.username",
+                    avatar: "$subscriber.avatar",
+                    fullName: "$subscriber.fullName",
+                    createdAt: "$subscriber.createdAt",
                 }
             }
         ])
+
+        // console.log("list", subscriberList);
 
         if (!subscriberList) {
             throw new ApiError(
@@ -96,18 +124,109 @@ const getUserChannelSubscribers = asyncHandler(
         }
 
         return res
-        .status(200)
-        .json(
-            new ApiResponse(
-                200,
-                subscriberList,
-                "Subscriber List Fetched Successfully"
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    subscriberList,
+                    "Subscriber List Fetched Successfully"
+                )
             )
-        )
+    }
+);
+
+const getSubscribedChannels = asyncHandler(
+    async (req, res) => {
+        const { subscriberId } = req.params;
+
+        if (!subscriberId?.trim()) {
+            throw new ApiError(
+                401,
+                "Subscriber ID Required"
+            )
+        }
+
+        // const channel = await Subscription.find({
+        //     subscriber: subscriberId
+        // }).select("_id");
+
+        // console.log(channel);
+
+        const channelListSubscriber = await User.aggregate([
+            {
+                $match: {
+                    username: subscriberId.toLowerCase()
+                }
+            },
+            {
+                $lookup: {
+                    from: "subscriptions",
+                    localField: "_id",
+                    foreignField: "subscriber",
+                    as: "subscribedchannels",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 0,
+                                subscriber: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "subscribedchannels.subscriber",
+                    foreignField: "_id",
+                    as: "subscriberdetails",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 0,
+                                username: 1,
+                                avatar:1,
+                                fullName:1,
+                                createdAt: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    username: "$subscriberdetails.username",
+                    avatar: "$subscriberdetails.avatar",
+                    fullName: "$subscriberdetails.fullName",
+                    createdAt: "$subscriberdetails.createdAt"
+                }
+            }
+        ])
+
+        // console.log("channel", channelListSubscriber)
+
+        if (!channelListSubscriber) {
+            throw new ApiError(
+                404,
+                "No Channels Subscribed"
+            )
+        }
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(
+                    200,
+                    channelListSubscriber,
+                    "Subscribed Channel List Fetched Successfully"
+                )
+            )
     }
 );
 
 export {
     addNewSubscription,
-    getUserChannelSubscribers
+    getUserChannelSubscribers,
+    getSubscribedChannels
 };
